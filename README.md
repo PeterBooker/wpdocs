@@ -1,4 +1,6 @@
-# wpdocs
+# WPDocs
+
+Note: This is currently just for fun testing and idea generation.
 
 A command-line tool that parses WordPress source code (PHP and JS/TS) and generates a static developer reference site using Hugo. It extracts functions, classes, hooks, interfaces, traits, methods, and their documentation to produce a browsable site similar to developer.wordpress.org.
 
