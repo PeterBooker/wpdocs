@@ -17,9 +17,48 @@ All parsing is done via [tree-sitter](https://tree-sitter.github.io/) for syntax
 ## Prerequisites
 
 - **Go** 1.25+
+- **GCC** — Required for CGo. The tree-sitter parsing library is a C library with Go bindings, so a C compiler must be installed and CGo must be enabled.
 - **Hugo** — Used to build the generated static site. If Hugo is not installed, wpdocs will still generate all the Hugo source files but skip the build step.
 - **PHP** — A local WordPress source tree (PHP files) is required as input. You can either point to an existing checkout or let wpdocs clone one from GitHub automatically.
 - **Git** — Required if you want wpdocs to automatically clone the WordPress source.
+
+### Installing dependencies
+
+**Ubuntu/Debian:**
+
+```bash
+# Install GCC (required for CGo / tree-sitter)
+sudo apt-get update && sudo apt-get install -y gcc
+
+# Install Hugo (latest release from GitHub)
+HUGO_VERSION=$(curl -s https://api.github.com/repos/gohugoio/hugo/releases/latest | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
+curl -Lo hugo.deb "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
+sudo dpkg -i hugo.deb
+rm hugo.deb
+```
+
+**macOS:**
+
+```bash
+# Install GCC (Xcode command line tools)
+xcode-select --install
+
+# Install Hugo
+brew install hugo
+```
+
+Verify that CGo is enabled (Go enables it automatically when a C compiler is found):
+
+```bash
+go env CGO_ENABLED
+# Should output: 1
+```
+
+If it outputs `0`, ensure `gcc` is installed and on your `PATH`, or explicitly enable it:
+
+```bash
+export CGO_ENABLED=1
+```
 
 ## Installation
 
@@ -85,7 +124,7 @@ The built site will be in `./docs/public/`.
 
 ## Project Structure
 
-```
+```bash
 cmd/wpdocs/          CLI entry point
 internal/
   model/             Symbol data model and thread-safe registry
