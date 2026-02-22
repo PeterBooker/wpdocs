@@ -17,12 +17,14 @@ import (
 
 func main() {
 	var (
-		wpPath  string
-		outDir  string
-		wpTag   string
-		skipJS  bool
-		skipPHP bool
-		workers int
+		wpPath       string
+		outDir       string
+		wpTag        string
+		guidesDir    string
+		overridesDir string
+		skipJS       bool
+		skipPHP      bool
+		workers      int
 	)
 
 	root := &cobra.Command{
@@ -83,7 +85,7 @@ suitable for developer.wordpress.org.`,
 
 			// Step 5: Generate Hugo site
 			log.Printf("Generating Hugo site in %s", outDir)
-			gen := output.NewHugo(outDir, src.Path, src.Version)
+			gen := output.NewHugo(outDir, src.Path, src.Version, guidesDir, overridesDir)
 			if err := gen.Generate(registry); err != nil {
 				return fmt.Errorf("generating output: %w", err)
 			}
@@ -98,6 +100,8 @@ suitable for developer.wordpress.org.`,
 	root.Flags().StringVarP(&wpPath, "source", "s", "", "Path to WordPress source (or auto-downloads if empty)")
 	root.Flags().StringVarP(&outDir, "output", "o", "./docs", "Output directory for Hugo site")
 	root.Flags().StringVarP(&wpTag, "tag", "t", "latest", "WordPress version tag (e.g., 6.7.1)")
+	root.Flags().StringVarP(&guidesDir, "guides", "g", "./content/guides", "Path to guide markdown files (_shared/ + version dirs)")
+	root.Flags().StringVar(&overridesDir, "overrides", "./content/overrides", "Path to override markdown files (_shared/ + version dirs)")
 	root.Flags().BoolVar(&skipJS, "skip-js", false, "Skip JS/TS parsing")
 	root.Flags().BoolVar(&skipPHP, "skip-php", false, "Skip PHP parsing")
 	root.Flags().IntVarP(&workers, "workers", "w", 8, "Number of parallel workers")

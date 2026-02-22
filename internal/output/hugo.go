@@ -1,6 +1,7 @@
 package output
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -15,25 +16,46 @@ import (
 
 // Hugo generates a complete Hugo static site from the symbol registry.
 type Hugo struct {
-	outDir    string
-	srcRoot   string // path to WordPress source tree
-	wpVersion string // WordPress version for GitHub/Trac links
+	outDir       string
+	srcRoot      string // path to WordPress source tree
+	wpVersion    string // full version e.g. "6.7.1"
+	version      string // normalized major.minor e.g. "6.7"
+	guidesDir    string // optional path to hand-written guide markdown files
+	overridesDir string // optional path to override markdown files
 }
 
 // NewHugo creates a Hugo site generator that writes to outDir.
-func NewHugo(outDir, srcRoot, wpVersion string) *Hugo {
-	return &Hugo{outDir: outDir, srcRoot: srcRoot, wpVersion: wpVersion}
+func NewHugo(outDir, srcRoot, wpVersion, guidesDir, overridesDir string) *Hugo {
+	return &Hugo{
+		outDir:       outDir,
+		srcRoot:      srcRoot,
+		wpVersion:    wpVersion,
+		version:      normalizeVersion(wpVersion),
+		guidesDir:    guidesDir,
+		overridesDir: overridesDir,
+	}
+}
+
+// normalizeVersion extracts major.minor from a full version string like "6.7.1".
+func normalizeVersion(v string) string {
+	parts := strings.SplitN(v, ".", 3)
+	if len(parts) >= 2 {
+		return parts[0] + "." + parts[1]
+	}
+	return v
 }
 
 func (h *Hugo) Generate(reg *model.Registry) error {
-	// Clean content directory from any previous run to avoid stale files
-	contentDir := filepath.Join(h.outDir, "content")
-	_ = os.RemoveAll(contentDir)
+	// Clean only this version's content directory (preserves other versions)
+	versionDir := filepath.Join(h.outDir, "content", h.version)
+	_ = os.RemoveAll(versionDir)
 
 	// Create directory structure
 	dirs := []string{
-		filepath.Join(h.outDir, "content"),
+		filepath.Join(h.outDir, "content", h.version),
+		filepath.Join(h.outDir, "data"),
 		filepath.Join(h.outDir, "layouts", "_default"),
+		filepath.Join(h.outDir, "layouts", "guides"),
 		filepath.Join(h.outDir, "layouts", "partials"),
 		filepath.Join(h.outDir, "static", "css"),
 	}
@@ -54,6 +76,8 @@ func (h *Hugo) Generate(reg *model.Registry) error {
 		filepath.Join("layouts", "_default", "list.html"):    layoutList,
 		filepath.Join("layouts", "_default", "single.html"):  layoutSingle,
 		filepath.Join("layouts", "index.html"):               layoutIndex,
+		filepath.Join("layouts", "guides", "list.html"):      layoutGuideList,
+		filepath.Join("layouts", "guides", "single.html"):    layoutGuideSingle,
 		filepath.Join("layouts", "partials", "nav.html"):     partialNav,
 		filepath.Join("layouts", "partials", "meta.html"):    partialMeta,
 	}
@@ -68,12 +92,21 @@ func (h *Hugo) Generate(reg *model.Registry) error {
 		return fmt.Errorf("writing style.css: %w", err)
 	}
 
-	// Write homepage content
+	// Update versions data file and write homepage
+	if err := h.updateVersionsData(); err != nil {
+		return fmt.Errorf("updating versions data: %w", err)
+	}
 	if err := h.writeFile(filepath.Join("content", "_index.md"), "---\ntitle: WordPress Developer Reference\n---\n"); err != nil {
 		return fmt.Errorf("writing homepage: %w", err)
 	}
 
-	// Generate content by kind
+	// Write version landing page
+	versionIndex := fmt.Sprintf("---\ntitle: \"WordPress %s Reference\"\nversion: %q\n---\n", h.wpVersion, h.version)
+	if err := h.writeFile(filepath.Join("content", h.version, "_index.md"), versionIndex); err != nil {
+		return fmt.Errorf("writing version index: %w", err)
+	}
+
+	// Generate content by kind (under versioned path)
 	kindSections := []struct {
 		kind    model.SymbolKind
 		section string
@@ -95,14 +128,14 @@ func (h *Hugo) Generate(reg *model.Registry) error {
 			continue
 		}
 
-		sectionDir := filepath.Join(h.outDir, "content", ks.section)
+		sectionDir := filepath.Join(h.outDir, "content", h.version, ks.section)
 		if err := os.MkdirAll(sectionDir, 0o755); err != nil {
 			return fmt.Errorf("creating section dir %s: %w", ks.section, err)
 		}
 
 		// Section index
 		sectionIndex := fmt.Sprintf("---\ntitle: %q\n---\n", ks.title)
-		if err := h.writeFile(filepath.Join("content", ks.section, "_index.md"), sectionIndex); err != nil {
+		if err := h.writeFile(filepath.Join("content", h.version, ks.section, "_index.md"), sectionIndex); err != nil {
 			return fmt.Errorf("writing %s section index: %w", ks.section, err)
 		}
 
@@ -121,6 +154,11 @@ func (h *Hugo) Generate(reg *model.Registry) error {
 		}
 	}
 
+	// Write guides (if guides directory provided)
+	if err := h.writeGuides(); err != nil {
+		return fmt.Errorf("writing guides: %w", err)
+	}
+
 	// Run hugo build
 	h.runHugoBuild()
 
@@ -134,7 +172,7 @@ func (h *Hugo) writeFile(relPath, content string) error {
 
 func (h *Hugo) writeSymbolPage(section string, sym *model.Symbol) error {
 	slug := symbolSlug(sym.ID)
-	relPath := filepath.Join("content", section, slug+".md")
+	relPath := filepath.Join("content", h.version, section, slug+".md")
 	absPath := filepath.Join(h.outDir, relPath)
 
 	f, err := os.Create(absPath)
@@ -144,18 +182,20 @@ func (h *Hugo) writeSymbolPage(section string, sym *model.Symbol) error {
 	defer f.Close()
 
 	data := symbolPageData{
-		Symbol:     sym,
-		Signature:  buildSignature(sym),
-		Changelog:  parseChangelog(sym),
-		SourceCode: h.readSourceContext(sym.Location.File, sym.Location.StartLine),
-		GitHubURL:  h.buildGitHubURL(sym.Location.File, sym.Location.StartLine, sym.Location.EndLine),
-		TracURL:    h.buildTracURL(sym.Location.File, sym.Location.StartLine),
+		Symbol:      sym,
+		Signature:   buildSignature(sym),
+		Changelog:   parseChangelog(sym),
+		SourceCode:  h.readSourceContext(sym.Location.File, sym.Location.StartLine),
+		GitHubURL:   h.buildGitHubURL(sym.Location.File, sym.Location.StartLine, sym.Location.EndLine),
+		TracURL:     h.buildTracURL(sym.Location.File, sym.Location.StartLine),
+		OverrideContent: h.readOverride(section, slug),
 	}
 
 	tmpl := template.Must(template.New("symbol").Funcs(template.FuncMap{
 		"yamlEscape":    yamlEscape,
 		"yamlMultiline": yamlMultiline,
 		"join":          strings.Join,
+		"safeContent":   safeContent,
 	}).Parse(symbolContentTemplate))
 
 	return tmpl.Execute(f, data)
@@ -181,6 +221,169 @@ func (h *Hugo) runHugoBuild() {
 		log.Printf("Warning: Hugo build failed: %v", err)
 		log.Printf("You can manually build with: hugo --source %s", absDir)
 	}
+}
+
+// versionsData represents the data/versions.json file.
+type versionsData struct {
+	All    []string `json:"all"`
+	Latest string   `json:"latest"`
+}
+
+// updateVersionsData reads the existing versions.json, adds the current version, and writes it back.
+func (h *Hugo) updateVersionsData() error {
+	dataPath := filepath.Join(h.outDir, "data", "versions.json")
+
+	var data versionsData
+	if raw, err := os.ReadFile(dataPath); err == nil {
+		_ = json.Unmarshal(raw, &data)
+	}
+
+	// Add current version if not already present
+	found := false
+	for _, v := range data.All {
+		if v == h.version {
+			found = true
+			break
+		}
+	}
+	if !found {
+		data.All = append(data.All, h.version)
+	}
+
+	// Sort versions descending (newest first) using simple string compare
+	sort.Slice(data.All, func(i, j int) bool {
+		return data.All[i] > data.All[j]
+	})
+
+	// Latest is always the highest version
+	if len(data.All) > 0 {
+		data.Latest = data.All[0]
+	}
+
+	raw, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dataPath, raw, 0o644)
+}
+
+// writeGuides merges guide markdown files from _shared/ and {version}/ into the
+// versioned content directory. Version-specific files override _shared/ files with
+// the same name.
+func (h *Hugo) writeGuides() error {
+	if h.guidesDir == "" {
+		return nil
+	}
+
+	// Collect guides: _shared first, then version-specific overrides
+	guides := h.collectContentFiles(h.guidesDir)
+	if len(guides) == 0 {
+		return nil
+	}
+
+	guidesContentDir := filepath.Join(h.outDir, "content", h.version, "guides")
+	if err := os.MkdirAll(guidesContentDir, 0o755); err != nil {
+		return err
+	}
+
+	// Write guides section index with cascade type
+	guidesIndex := "---\ntitle: \"Guides\"\ncascade:\n  type: guides\n---\n"
+	if err := h.writeFile(filepath.Join("content", h.version, "guides", "_index.md"), guidesIndex); err != nil {
+		return err
+	}
+
+	weight := 1
+	// Sort by filename for deterministic order
+	names := make([]string, 0, len(guides))
+	for name := range guides {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		srcPath := guides[name]
+
+		content, err := os.ReadFile(srcPath)
+		if err != nil {
+			log.Printf("Warning: could not read guide %s: %v", name, err)
+			continue
+		}
+
+		body := string(content)
+
+		// If the file already has front matter, use it as-is (cascade type applies)
+		if !strings.HasPrefix(body, "---") {
+			title := strings.TrimSuffix(name, ".md")
+			title = strings.ReplaceAll(title, "-", " ")
+			words := strings.Fields(title)
+			for i, w := range words {
+				if len(w) > 0 {
+					words[i] = strings.ToUpper(w[:1]) + w[1:]
+				}
+			}
+			title = strings.Join(words, " ")
+			body = fmt.Sprintf("---\ntitle: %q\nweight: %d\n---\n\n%s", title, weight, body)
+		}
+
+		outPath := filepath.Join("content", h.version, "guides", name)
+		if err := h.writeFile(outPath, body); err != nil {
+			log.Printf("Warning: could not write guide %s: %v", name, err)
+			continue
+		}
+		weight++
+	}
+
+	return nil
+}
+
+// collectContentFiles builds a map of filename → absolute path by reading _shared/
+// first, then overlaying version-specific files. Returns only .md files.
+func (h *Hugo) collectContentFiles(baseDir string) map[string]string {
+	result := make(map[string]string)
+
+	// Read _shared/ first
+	sharedDir := filepath.Join(baseDir, "_shared")
+	if entries, err := os.ReadDir(sharedDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+				result[e.Name()] = filepath.Join(sharedDir, e.Name())
+			}
+		}
+	}
+
+	// Overlay version-specific (wins over _shared)
+	versionDir := filepath.Join(baseDir, h.version)
+	if entries, err := os.ReadDir(versionDir); err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+				result[e.Name()] = filepath.Join(versionDir, e.Name())
+			}
+		}
+	}
+
+	return result
+}
+
+// readOverride reads an optional override markdown file for a symbol page.
+// Checks version-specific directory first, then falls back to _shared/.
+func (h *Hugo) readOverride(section, slug string) string {
+	if h.overridesDir == "" {
+		return ""
+	}
+
+	// Version-specific override wins
+	versionPath := filepath.Join(h.overridesDir, h.version, section, slug+".md")
+	if data, err := os.ReadFile(versionPath); err == nil {
+		return string(data)
+	}
+
+	// Fall back to _shared
+	sharedPath := filepath.Join(h.overridesDir, "_shared", section, slug+".md")
+	if data, err := os.ReadFile(sharedPath); err == nil {
+		return string(data)
+	}
+
+	return ""
 }
 
 func symbolSlug(id string) string {
@@ -209,6 +412,30 @@ func symbolSlug(id string) string {
 	return slug
 }
 
+// safeContent escapes HTML script tags and Hugo template delimiters in content
+// that will be written into the markdown body of a Hugo page. Without this,
+// literal <script> tags from WordPress docblocks get rendered as real HTML
+// (due to Goldmark unsafe mode) and {{ }} from Underscore/Mustache templates
+// get interpreted as Hugo template expressions.
+func safeContent(s string) string {
+	// Escape <script> and </script> (case-insensitive) to prevent raw HTML injection
+	r := strings.NewReplacer(
+		"<script", "&lt;script",
+		"</script", "&lt;/script",
+		"<SCRIPT", "&lt;SCRIPT",
+		"</SCRIPT", "&lt;/SCRIPT",
+		"<Script", "&lt;Script",
+		"</Script", "&lt;/Script",
+	)
+	s = r.Replace(s)
+
+	// Escape {{ and }} to prevent Hugo template evaluation
+	s = strings.ReplaceAll(s, "{{", "&#123;&#123;")
+	s = strings.ReplaceAll(s, "}}", "&#125;&#125;")
+
+	return s
+}
+
 // yamlEscape quotes a string for safe YAML embedding.
 func yamlEscape(s string) string {
 	if s == "" {
@@ -232,11 +459,12 @@ type changelogEntry struct {
 // symbolPageData wraps a Symbol with computed fields for the content template.
 type symbolPageData struct {
 	*model.Symbol
-	Signature  string
-	Changelog  []changelogEntry
-	SourceCode string
-	GitHubURL  string
-	TracURL    string
+	Signature       string
+	Changelog       []changelogEntry
+	SourceCode      string
+	GitHubURL       string
+	TracURL         string
+	OverrideContent string
 }
 
 // buildSignature constructs a code signature string like the WP developer reference.
@@ -417,6 +645,10 @@ title = "WordPress Developer Reference"
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
+
+[markup.tableOfContents]
+  startLevel = 2
+  endLevel = 4
 `
 
 // --- Layout templates ---
@@ -443,32 +675,70 @@ const layoutBaseof = `<!DOCTYPE html>
 `
 
 const layoutIndex = `{{ define "main" }}
-<h1>{{ .Site.Title }}</h1>
-
-<div class="stats-grid">
-  {{ $sections := slice "functions" "classes" "methods" "hooks" "interfaces" "traits" "enums" "components" }}
-  {{ range $sections }}
-    {{ $pages := where $.Site.RegularPages "Section" . }}
-    {{ if $pages }}
-    <div class="stat-card">
-      <div class="stat-number">{{ len $pages }}</div>
-      <div class="stat-label"><a href="{{ . | relURL }}/">{{ . | title }}</a></div>
-    </div>
-    {{ end }}
+{{ with .Site.Data.versions }}
+  {{ with .latest }}
+  <script>window.location.href = '/{{ . }}/';</script>
   {{ end }}
-  <div class="stat-card stat-total">
-    <div class="stat-number">{{ len .Site.RegularPages }}</div>
-    <div class="stat-label">Total Symbols</div>
-  </div>
-</div>
-
-{{ with .Content }}
-<div class="home-content">{{ . }}</div>
 {{ end }}
+
+<h1>{{ .Site.Title }}</h1>
+<p>Select a version:</p>
+<ul class="version-list">
+{{ with .Site.Data.versions }}
+  {{ range .all }}
+  <li><a href="/{{ . }}/">WordPress {{ . }}</a></li>
+  {{ end }}
+{{ end }}
+</ul>
 {{ end }}
 `
 
 const layoutList = `{{ define "main" }}
+{{ $isVersionRoot := and .Params.version (eq (len .Sections) (len .Sections)) }}
+{{ $parts := split (strings.TrimPrefix "/" .RelPermalink) "/" }}
+{{ $depth := len (where $parts "." "!=" "") }}
+
+{{ if le $depth 1 }}
+{{/* Version landing page */}}
+<h1>{{ .Title }}</h1>
+
+{{ $guidesSection := .GetPage "guides" }}
+{{ with $guidesSection }}
+  {{ if .Pages }}
+  <section class="guides-overview">
+    <h2>Guides</h2>
+    <div class="guide-cards">
+      {{ range .Pages.ByWeight }}
+      <a href="{{ .RelPermalink }}" class="guide-card">
+        <h3>{{ .Title }}</h3>
+        {{ with .Params.summary }}<p>{{ . }}</p>{{ end }}
+      </a>
+      {{ end }}
+    </div>
+  </section>
+  {{ end }}
+{{ end }}
+
+<section class="reference-overview">
+  <h2>Reference</h2>
+  <div class="stats-grid">
+    {{ $refSections := slice "functions" "classes" "methods" "hooks" "interfaces" "traits" "enums" "components" }}
+    {{ range $refSections }}
+      {{ $sec := $.GetPage . }}
+      {{ with $sec }}
+        {{ if .Pages }}
+        <div class="stat-card">
+          <div class="stat-number">{{ len .Pages }}</div>
+          <div class="stat-label"><a href="{{ .RelPermalink }}">{{ .Title }}</a></div>
+        </div>
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  </div>
+</section>
+
+{{ else }}
+{{/* Section listing page (functions, classes, etc.) */}}
 <h1>{{ .Title }}</h1>
 <p class="count">{{ len .Pages }} items</p>
 
@@ -493,6 +763,7 @@ const layoutList = `{{ define "main" }}
     {{ end }}
   </tbody>
 </table>
+{{ end }}
 {{ end }}
 `
 
@@ -647,20 +918,72 @@ const layoutSingle = `{{ define "main" }}
 {{ end }}
 `
 
-const partialNav = `<div class="nav-header">
+const partialNav = `{{ $pathParts := split (strings.TrimPrefix "/" .RelPermalink) "/" }}
+{{ $currentVersion := index $pathParts 0 }}
+{{ $versionPage := $.Site.GetPage (printf "/%s" $currentVersion) }}
+
+<div class="nav-header">
   <a href="{{ "/" | relURL }}">{{ .Site.Title }}</a>
 </div>
+
+{{/* Build version list from actual content sections, not just data file */}}
+{{ $versions := slice }}
+{{ range .Site.Home.Sections }}
+  {{ $versions = $versions | append .Section }}
+{{ end }}
+{{ if gt (len $versions) 0 }}
+<div class="version-select">
+  <select id="version-switcher" onchange="switchVersion(this.value)">
+    {{ range $versions }}
+    <option value="{{ . }}"{{ if eq . $currentVersion }} selected{{ end }}>{{ . }}</option>
+    {{ end }}
+  </select>
+</div>
+{{ end }}
+
 <nav>
-  {{ $sections := slice "functions" "classes" "methods" "hooks" "interfaces" "traits" "enums" "components" }}
-  {{ range $sections }}
-    {{ $pages := where $.Site.RegularPages "Section" . }}
-    {{ if $pages }}
-    <a href="{{ . | relURL }}/"{{ if eq $.Section . }} class="active"{{ end }}>
-      {{ . | title }} <span class="count">({{ len $pages }})</span>
-    </a>
+  {{ with $versionPage }}
+    {{ $guidesSection := .GetPage "guides" }}
+    {{ with $guidesSection }}
+      {{ if .Pages }}
+      <div class="nav-section-label">Guides</div>
+      {{ range .Pages.ByWeight }}
+      <a href="{{ .RelPermalink }}" class="nav-guide{{ if eq $.RelPermalink .RelPermalink }} active{{ end }}">
+        {{ .Title }}
+      </a>
+      {{ end }}
+      <div class="nav-divider"></div>
+      {{ end }}
+    {{ end }}
+
+    <div class="nav-section-label">Reference</div>
+    {{ $refSections := slice "functions" "classes" "methods" "hooks" "interfaces" "traits" "enums" "components" }}
+    {{ range $refSections }}
+      {{ $sec := $versionPage.GetPage . }}
+      {{ with $sec }}
+        {{ if .Pages }}
+        <a href="{{ .RelPermalink }}"{{ if eq $.Section . }} class="active"{{ end }}>
+          {{ .Title }} <span class="count">({{ len .Pages }})</span>
+        </a>
+        {{ end }}
+      {{ end }}
     {{ end }}
   {{ end }}
 </nav>
+
+<script>
+function switchVersion(v) {
+  var parts = window.location.pathname.split('/').filter(Boolean);
+  if (parts.length > 0) { parts[0] = v; }
+  var target = '/' + parts.join('/');
+  // Try the exact page first; fall back to version root if it 404s
+  fetch(target, { method: 'HEAD' }).then(function(r) {
+    window.location.pathname = r.ok ? target : '/' + v + '/';
+  }).catch(function() {
+    window.location.pathname = '/' + v + '/';
+  });
+}
+</script>
 `
 
 const partialMeta = `<div class="meta-bar">
@@ -670,6 +993,50 @@ const partialMeta = `<div class="meta-bar">
   {{ with .Params.since }}<span class="badge since">Since {{ . }}</span>{{ end }}
   {{ with .Params.deprecated }}<span class="badge deprecated">Deprecated</span>{{ end }}
 </div>
+`
+
+// --- Guide layout templates ---
+
+const layoutGuideList = `{{ define "main" }}
+<h1>{{ .Title }}</h1>
+<div class="guide-cards">
+  {{ range .Pages.ByWeight }}
+  <a href="{{ .RelPermalink }}" class="guide-card">
+    <h3>{{ .Title }}</h3>
+    {{ with .Params.summary }}<p>{{ . }}</p>{{ end }}
+  </a>
+  {{ end }}
+</div>
+{{ end }}
+`
+
+const layoutGuideSingle = `{{ define "main" }}
+<article class="guide-article">
+
+<h1>{{ .Title }}</h1>
+
+{{ if .TableOfContents }}
+<aside class="guide-toc">
+  <h4>On this page</h4>
+  {{ .TableOfContents }}
+</aside>
+{{ end }}
+
+<div class="guide-body">
+  {{ .Content }}
+</div>
+
+<nav class="guide-pager">
+  {{ with .PrevInSection }}
+  <a href="{{ .RelPermalink }}" class="pager-prev">&larr; {{ .Title }}</a>
+  {{ end }}
+  {{ with .NextInSection }}
+  <a href="{{ .RelPermalink }}" class="pager-next">{{ .Title }} &rarr;</a>
+  {{ end }}
+</nav>
+
+</article>
+{{ end }}
 `
 
 // --- CSS ---
@@ -1140,11 +1507,253 @@ code {
 ul { margin-left: 1.5rem; margin-bottom: 0.5rem; }
 li { margin: 0.25rem 0; }
 
+/* Version selector */
+.version-select {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #464b50;
+  margin-bottom: 0.5rem;
+}
+
+.version-select select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background: #32373c;
+  color: #fff;
+  border: 1px solid #464b50;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.version-select select:hover {
+  border-color: var(--wp-blue);
+}
+
+/* Nav section labels */
+.nav-section-label {
+  padding: 0.5rem 1rem 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #787c82;
+}
+
+.nav-divider {
+  border-bottom: 1px solid #464b50;
+  margin: 0.4rem 1rem;
+}
+
+.nav-guide {
+  padding-left: 1.5rem !important;
+  font-size: 0.82rem !important;
+}
+
+/* Version list (homepage fallback) */
+.version-list {
+  list-style: none;
+  margin-left: 0;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.version-list li a {
+  display: block;
+  padding: 0.5rem 1.25rem;
+  background: var(--wp-light);
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.version-list li a:hover {
+  background: var(--wp-blue);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Guide cards */
+.guide-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.guide-card {
+  display: block;
+  padding: 1.25rem;
+  background: var(--wp-light);
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.guide-card:hover {
+  border-color: var(--wp-blue);
+  box-shadow: 0 2px 8px rgba(0, 115, 170, 0.1);
+  text-decoration: none;
+}
+
+.guide-card h3 {
+  margin: 0 0 0.25rem;
+  color: var(--wp-dark);
+  font-size: 1rem;
+}
+
+.guide-card p {
+  margin: 0;
+  color: #50575e;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Guide overview section */
+.guides-overview {
+  margin-bottom: 2rem;
+}
+
+.reference-overview {
+  margin-bottom: 2rem;
+}
+
+/* Guide article */
+.guide-article {
+  position: relative;
+}
+
+.guide-article h1 {
+  margin-bottom: 1.5rem;
+}
+
+.guide-toc {
+  float: right;
+  width: 220px;
+  margin: 0 0 1rem 2rem;
+  padding: 1rem;
+  background: var(--wp-light);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.guide-toc h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #50575e;
+}
+
+.guide-toc nav ul {
+  margin: 0;
+  list-style: none;
+}
+
+.guide-toc nav ul ul {
+  margin-left: 0.75rem;
+}
+
+.guide-toc nav a {
+  display: block;
+  padding: 0.15rem 0;
+  color: #50575e;
+  font-size: 0.82rem;
+}
+
+.guide-toc nav a:hover {
+  color: var(--wp-blue);
+}
+
+/* Guide body prose */
+.guide-body {
+  line-height: 1.8;
+}
+
+.guide-body h2 {
+  margin-top: 2.5rem;
+}
+
+.guide-body h3 {
+  margin-top: 1.5rem;
+}
+
+.guide-body p {
+  margin-bottom: 1rem;
+}
+
+.guide-body pre {
+  background: #23282d;
+  color: #eee;
+  padding: 1rem 1.25rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 1rem 0;
+}
+
+.guide-body pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+.guide-body blockquote {
+  border-left: 4px solid var(--wp-blue);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background: #f8f9fa;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Guide pager */
+.guide-pager {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.guide-pager a {
+  padding: 0.5rem 1rem;
+  background: var(--wp-light);
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.guide-pager a:hover {
+  background: var(--wp-blue);
+  color: #fff;
+  text-decoration: none;
+}
+
+.pager-next {
+  margin-left: auto;
+}
+
+/* Override content section */
+.override-content {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--wp-blue);
+}
+
+.override-content h2 {
+  color: var(--wp-blue);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .content { margin-left: 0; padding: 1rem; max-width: 100%; }
   .member-list { column-count: 1; }
+  .guide-toc { float: none; width: 100%; margin: 0 0 1.5rem 0; }
+  .guide-cards { grid-template-columns: 1fr; }
 }
 `
 
@@ -1245,5 +1854,13 @@ source_code: {{ yamlMultiline .SourceCode }}
 {{- end }}
 ---
 
-{{ .Doc.Description }}
+{{ safeContent .Doc.Description }}
+{{- if .OverrideContent }}
+
+<div class="override-content">
+
+{{ safeContent .OverrideContent }}
+
+</div>
+{{- end }}
 `

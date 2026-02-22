@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Guides on </title>
+    <link>//localhost:1313/guides/</link>
+    <description>Recent content in Guides on </description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <atom:link href="//localhost:1313/guides/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Getting Started</title>
+      <link>//localhost:1313/guides/_shared/getting-started/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/_shared/getting-started/</guid>
+      <description>Learn the fundamentals of WordPress development.</description>
+    </item>
+    <item>
+      <title>Hooks</title>
+      <link>//localhost:1313/guides/_shared/hooks/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/_shared/hooks/</guid>
+      <description>Understanding WordPress actions and filters.</description>
+    </item>
+    <item>
+      <title>Theme Development</title>
+      <link>//localhost:1313/guides/_shared/theme-development/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/_shared/theme-development/</guid>
+      <description>Build custom WordPress themes from scratch.</description>
+    </item>
+    <item>
+      <title>Database</title>
+      <link>//localhost:1313/guides/_shared/database/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/_shared/database/</guid>
+      <description>Working with the WordPress database using wpdb and WP_Query.</description>
+    </item>
+    <item>
+      <title>REST API</title>
+      <link>//localhost:1313/guides/_shared/rest-api/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/_shared/rest-api/</guid>
+      <description>Building and consuming the WordPress REST API.</description>
+    </item>
+    <item>
+      <title>Plugin Development</title>
+      <link>//localhost:1313/guides/_shared/plugins/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/_shared/plugins/</guid>
+      <description>Build WordPress plugins from activation to distribution.</description>
+    </item>
+    <item>
+      <title>Block Editor</title>
+      <link>//localhost:1313/guides/6.6/block-editor/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/6.6/block-editor/</guid>
+      <description>Block development in WordPress 6.6 — Data Views, pattern overrides, and per-block CSS loading.</description>
+    </item>
+    <item>
+      <title>Block Editor</title>
+      <link>//localhost:1313/guides/6.7/block-editor/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/6.7/block-editor/</guid>
+      <description>Block development in WordPress 6.7 — Block Bindings, style variations, and the Interactivity API.</description>
+    </item>
+    <item>
+      <title>Block Editor</title>
+      <link>//localhost:1313/guides/6.8/block-editor/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>//localhost:1313/guides/6.8/block-editor/</guid>
+      <description>Block development in WordPress 6.8 — Speculative Loading, Data Views, and the Style Engine.</description>
+    </item>
+  </channel>
+</rss>
