@@ -1,0 +1,17 @@
+{{ define "main" }}
+{{ with .Site.Data.versions }}
+  {{ with .latest }}
+  <script>window.location.href = '/{{ . }}/';</script>
+  {{ end }}
+{{ end }}
+
+<h1>{{ .Site.Title }}</h1>
+<p>Select a version:</p>
+<ul class="version-list">
+{{ with .Site.Data.versions }}
+  {{ range .all }}
+  <li><a href="/{{ . }}/">WordPress {{ . }}</a></li>
+  {{ end }}
+{{ end }}
+</ul>
+{{ end }}

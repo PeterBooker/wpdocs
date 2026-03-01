@@ -1,0 +1,714 @@
+/* WordPress Developer Reference */
+:root {
+  --wp-blue: #0073aa;
+  --wp-dark: #23282d;
+  --wp-light: #f0f0f1;
+  --wp-border: #c3c4c7;
+  --wp-red: #d63638;
+  --wp-green: #00a32a;
+  --sidebar-width: 240px;
+  --content-max: 900px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  color: #1d2327;
+  line-height: 1.6;
+  background: #fff;
+  font-size: 15px;
+}
+
+a { color: var(--wp-blue); text-decoration: none; }
+a:hover { text-decoration: underline; color: #005177; }
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--wp-dark);
+  color: #fff;
+  padding: 1rem 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+}
+
+.nav-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #464b50;
+  margin-bottom: 0.5rem;
+}
+
+.nav-header a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 0.4rem 1rem;
+  color: #b4b9be;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar nav a:hover {
+  background: #32373c;
+  color: #fff;
+}
+
+.sidebar nav a.active {
+  background: var(--wp-blue);
+  color: #fff;
+}
+
+.sidebar nav .count {
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+
+/* Main content */
+.content {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  padding: 2rem 3rem;
+  max-width: calc(var(--content-max) + var(--sidebar-width) + 6rem);
+}
+
+h1 {
+  font-size: 1.6rem;
+  border-bottom: 2px solid var(--wp-blue);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--wp-dark);
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+h3 {
+  font-size: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #50575e;
+}
+
+/* Stats grid (homepage) */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.stat-card {
+  background: var(--wp-light);
+  padding: 1.25rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.stat-card.stat-total {
+  background: var(--wp-blue);
+  color: #fff;
+}
+
+.stat-card.stat-total .stat-number { color: #fff; }
+.stat-card.stat-total .stat-label a { color: #fff; }
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--wp-blue);
+}
+
+.stat-label { font-size: 0.9rem; color: #50575e; }
+.stat-label a { color: var(--wp-blue); text-decoration: none; }
+.stat-label a:hover { text-decoration: underline; }
+
+/* Listing table (section pages) */
+.listing {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.listing th, .listing td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.listing th { background: var(--wp-light); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.listing a { font-weight: 500; }
+
+.listing .since { color: #787c82; font-size: 0.85rem; white-space: nowrap; }
+
+.deprecated-row { opacity: 0.65; }
+
+p.count { color: #787c82; margin-bottom: 0.5rem; }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge.kind { background: var(--wp-light); color: var(--wp-dark); }
+.badge.lang { background: #dce8f0; color: var(--wp-blue); }
+.badge.since { background: #e7f5e7; color: #1e7e1e; }
+.badge.access { background: #fef3cd; color: #856404; }
+.badge.deprecated { background: #fcf0f1; color: var(--wp-red); }
+
+.meta-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Reference article */
+.wp-reference section {
+  margin-bottom: 0.5rem;
+}
+
+/* Deprecated notice */
+.deprecated-notice {
+  background: #fcf0f1;
+  border-left: 4px solid var(--wp-red);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  border-radius: 0 3px 3px 0;
+}
+
+/* Signature block */
+.signature-section {
+  margin: 1rem 0;
+}
+
+.signature-block {
+  background: #23282d;
+  color: #eee;
+  padding: 1rem 1.25rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.signature-block code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Description */
+.description-section .summary {
+  font-size: 1.05rem;
+  margin-bottom: 0.75rem;
+}
+
+.long-description {
+  line-height: 1.7;
+  margin-top: 0.5rem;
+}
+
+.long-description p {
+  margin-bottom: 0.75rem;
+}
+
+.doc-links {
+  list-style: none;
+  margin-left: 0;
+}
+
+/* Parameters (definition list) */
+.param-list {
+  margin: 0.5rem 0 1rem;
+}
+
+.param-list dt {
+  padding: 0.6rem 0 0.2rem;
+  border-top: 1px solid #e0e0e0;
+  font-weight: 600;
+}
+
+.param-list dt:first-child {
+  border-top: none;
+}
+
+.param-list dt code {
+  font-size: 0.95em;
+  background: none;
+  padding: 0;
+  color: var(--wp-dark);
+}
+
+.param-type {
+  margin-left: 0.5rem;
+  font-weight: 400;
+}
+
+.param-type code {
+  color: var(--wp-blue);
+  background: none;
+  padding: 0;
+}
+
+.param-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: #fef3cd;
+  color: #856404;
+}
+
+.param-list dd {
+  padding: 0.2rem 0 0.6rem 1.25rem;
+  color: #50575e;
+  line-height: 1.6;
+}
+
+.param-default {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: #787c82;
+}
+
+/* Return */
+.return-section p {
+  line-height: 1.6;
+}
+
+.return-type {
+  color: var(--wp-blue);
+  background: none;
+  padding: 0;
+  font-weight: 600;
+}
+
+/* Source */
+.source-section {
+  background: var(--wp-light);
+  padding: 1rem 1.25rem;
+  border-radius: 4px;
+  margin-top: 2rem;
+}
+
+.source-section h2 {
+  margin-top: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.source-file {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.source-file code {
+  background: none;
+  padding: 0;
+}
+
+.source-links {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.source-links a {
+  font-weight: 500;
+}
+
+.source-code-details {
+  margin-top: 0.75rem;
+}
+
+.source-code-details summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--wp-blue);
+  font-weight: 500;
+}
+
+.source-code-details summary:hover {
+  text-decoration: underline;
+}
+
+.source-code {
+  background: #23282d;
+  color: #eee;
+  padding: 1rem 1.25rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
+
+.source-code code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Related tables */
+.related-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0 1rem;
+  font-size: 0.9rem;
+}
+
+.related-table th, .related-table td {
+  text-align: left;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.related-table th {
+  background: var(--wp-light);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.related-table code {
+  background: none;
+  padding: 0;
+}
+
+/* Changelog table */
+.changelog-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0 1rem;
+  font-size: 0.9rem;
+}
+
+.changelog-table th, .changelog-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.changelog-table th {
+  background: var(--wp-light);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.changelog-table td:first-child {
+  white-space: nowrap;
+  font-weight: 500;
+  width: 120px;
+}
+
+/* Hook details */
+.hook-section p {
+  margin: 0.25rem 0;
+}
+
+/* Members list */
+.member-list {
+  column-count: 2;
+  column-gap: 2rem;
+}
+
+/* General */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--wp-light);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
+ul { margin-left: 1.5rem; margin-bottom: 0.5rem; }
+li { margin: 0.25rem 0; }
+
+/* Version selector */
+.version-select {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #464b50;
+  margin-bottom: 0.5rem;
+}
+
+.version-select select {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  background: #32373c;
+  color: #fff;
+  border: 1px solid #464b50;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.version-select select:hover {
+  border-color: var(--wp-blue);
+}
+
+/* Nav section labels */
+.nav-section-label {
+  padding: 0.5rem 1rem 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #787c82;
+}
+
+.nav-divider {
+  border-bottom: 1px solid #464b50;
+  margin: 0.4rem 1rem;
+}
+
+.nav-guide {
+  padding-left: 1.5rem !important;
+  font-size: 0.82rem !important;
+}
+
+/* Version list (homepage fallback) */
+.version-list {
+  list-style: none;
+  margin-left: 0;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.version-list li a {
+  display: block;
+  padding: 0.5rem 1.25rem;
+  background: var(--wp-light);
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.version-list li a:hover {
+  background: var(--wp-blue);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Guide cards */
+.guide-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.guide-card {
+  display: block;
+  padding: 1.25rem;
+  background: var(--wp-light);
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.guide-card:hover {
+  border-color: var(--wp-blue);
+  box-shadow: 0 2px 8px rgba(0, 115, 170, 0.1);
+  text-decoration: none;
+}
+
+.guide-card h3 {
+  margin: 0 0 0.25rem;
+  color: var(--wp-dark);
+  font-size: 1rem;
+}
+
+.guide-card p {
+  margin: 0;
+  color: #50575e;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Guide overview section */
+.guides-overview {
+  margin-bottom: 2rem;
+}
+
+.reference-overview {
+  margin-bottom: 2rem;
+}
+
+/* Guide article */
+.guide-article {
+  position: relative;
+}
+
+.guide-article h1 {
+  margin-bottom: 1.5rem;
+}
+
+.guide-toc {
+  float: right;
+  width: 220px;
+  margin: 0 0 1rem 2rem;
+  padding: 1rem;
+  background: var(--wp-light);
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.guide-toc h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #50575e;
+}
+
+.guide-toc nav ul {
+  margin: 0;
+  list-style: none;
+}
+
+.guide-toc nav ul ul {
+  margin-left: 0.75rem;
+}
+
+.guide-toc nav a {
+  display: block;
+  padding: 0.15rem 0;
+  color: #50575e;
+  font-size: 0.82rem;
+}
+
+.guide-toc nav a:hover {
+  color: var(--wp-blue);
+}
+
+/* Guide body prose */
+.guide-body {
+  line-height: 1.8;
+}
+
+.guide-body h2 {
+  margin-top: 2.5rem;
+}
+
+.guide-body h3 {
+  margin-top: 1.5rem;
+}
+
+.guide-body p {
+  margin-bottom: 1rem;
+}
+
+.guide-body pre {
+  background: #23282d;
+  color: #eee;
+  padding: 1rem 1.25rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 1rem 0;
+}
+
+.guide-body pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+.guide-body blockquote {
+  border-left: 4px solid var(--wp-blue);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background: #f8f9fa;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Guide pager */
+.guide-pager {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.guide-pager a {
+  padding: 0.5rem 1rem;
+  background: var(--wp-light);
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.guide-pager a:hover {
+  background: var(--wp-blue);
+  color: #fff;
+  text-decoration: none;
+}
+
+.pager-next {
+  margin-left: auto;
+}
+
+/* Override content section */
+.override-content {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid var(--wp-blue);
+}
+
+.override-content h2 {
+  color: var(--wp-blue);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .content { margin-left: 0; padding: 1rem; max-width: 100%; }
+  .member-list { column-count: 1; }
+  .guide-toc { float: none; width: 100%; margin: 0 0 1.5rem 0; }
+  .guide-cards { grid-template-columns: 1fr; }
+}

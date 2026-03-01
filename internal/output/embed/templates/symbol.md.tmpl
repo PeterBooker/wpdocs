@@ -1,0 +1,104 @@
+---
+title: {{ yamlEscape .Name }}
+linkTitle: {{ yamlEscape .Name }}
+symbol_kind: {{ yamlEscape (printf "%s" .Kind) }}
+language: {{ yamlEscape .Language }}
+since: {{ yamlEscape .Doc.Since }}
+deprecated: {{ yamlEscape .Doc.Deprecated }}
+access: {{ yamlEscape .Doc.Access }}
+summary: {{ yamlEscape .Doc.Summary }}
+signature: {{ yamlEscape .Signature }}
+{{- if .Symbol.Params }}
+parameters:
+{{- range .Symbol.Params }}
+  - name: {{ yamlEscape .Name }}
+    type: {{ yamlEscape .Type }}
+    description: {{ yamlEscape .Description }}
+    default: {{ yamlEscape .Default }}
+    variadic: {{ .IsVariadic }}
+    pass_by_ref: {{ .IsPassByRef }}
+{{- end }}
+{{- end }}
+{{- if .Returns }}
+returns:
+  type: {{ yamlEscape .Returns.Type }}
+  description: {{ yamlEscape .Returns.Description }}
+{{- end }}
+hook_type: {{ yamlEscape (printf "%s" .HookType) }}
+hook_tag: {{ yamlEscape .HookTag }}
+{{- if .CallSites }}
+call_sites:
+{{- range .CallSites }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+{{- if .Extends }}
+extends:
+{{- range .Extends }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+{{- if .Implements }}
+implements:
+{{- range .Implements }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+{{- if .Members }}
+members:
+{{- range .Members }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+parent_id: {{ yamlEscape .ParentID }}
+{{- if .UsedBy }}
+used_by:
+{{- range .UsedBy }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+{{- if .Uses }}
+uses:
+{{- range .Uses }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+overrides: {{ yamlEscape .Overrides }}
+{{- if .Doc.SeeAlso }}
+see_also:
+{{- range .Doc.SeeAlso }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+{{- if .Doc.Links }}
+links:
+{{- range .Doc.Links }}
+  - {{ yamlEscape . }}
+{{- end }}
+{{- end }}
+{{- if .Changelog }}
+changelog:
+{{- range .Changelog }}
+  - version: {{ yamlEscape .Version }}
+    description: {{ yamlEscape .Description }}
+{{- end }}
+{{- end }}
+file: {{ yamlEscape .Location.File }}
+start_line: {{ .Location.StartLine }}
+end_line: {{ .Location.EndLine }}
+github_url: {{ yamlEscape .GitHubURL }}
+trac_url: {{ yamlEscape .TracURL }}
+{{- if .SourceCode }}
+source_code: {{ yamlMultiline .SourceCode }}
+{{- end }}
+---
+
+{{ safeContent .Doc.Description }}
+{{- if .OverrideContent }}
+
+<div class="override-content">
+
+{{ safeContent .OverrideContent }}
+
+</div>
+{{- end }}

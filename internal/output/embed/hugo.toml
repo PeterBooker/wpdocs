@@ -1,0 +1,15 @@
+baseURL = "/"
+languageCode = "en-us"
+title = "WordPress Developer Reference"
+
+[pagination]
+  pagerSize = 200
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[markup.tableOfContents]
+  startLevel = 2
+  endLevel = 4

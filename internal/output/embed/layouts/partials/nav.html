@@ -1,0 +1,66 @@
+{{ $pathParts := split (strings.TrimPrefix "/" .RelPermalink) "/" }}
+{{ $currentVersion := index $pathParts 0 }}
+{{ $versionPage := $.Site.GetPage (printf "/%s" $currentVersion) }}
+
+<div class="nav-header">
+  <a href="{{ "/" | relURL }}">{{ .Site.Title }}</a>
+</div>
+
+{{/* Build version list from actual content sections, not just data file */}}
+{{ $versions := slice }}
+{{ range .Site.Home.Sections }}
+  {{ $versions = $versions | append .Section }}
+{{ end }}
+{{ if gt (len $versions) 0 }}
+<div class="version-select">
+  <select id="version-switcher" onchange="switchVersion(this.value)">
+    {{ range $versions }}
+    <option value="{{ . }}"{{ if eq . $currentVersion }} selected{{ end }}>{{ . }}</option>
+    {{ end }}
+  </select>
+</div>
+{{ end }}
+
+<nav>
+  {{ with $versionPage }}
+    {{ $guidesSection := .GetPage "guides" }}
+    {{ with $guidesSection }}
+      {{ if .Pages }}
+      <div class="nav-section-label">Guides</div>
+      {{ range .Pages.ByWeight }}
+      <a href="{{ .RelPermalink }}" class="nav-guide{{ if eq $.RelPermalink .RelPermalink }} active{{ end }}">
+        {{ .Title }}
+      </a>
+      {{ end }}
+      <div class="nav-divider"></div>
+      {{ end }}
+    {{ end }}
+
+    <div class="nav-section-label">Reference</div>
+    {{ $refSections := slice "functions" "classes" "methods" "hooks" "interfaces" "traits" "enums" "components" }}
+    {{ range $refSections }}
+      {{ $sec := $versionPage.GetPage . }}
+      {{ with $sec }}
+        {{ if .Pages }}
+        <a href="{{ .RelPermalink }}"{{ if eq $.Section . }} class="active"{{ end }}>
+          {{ .Title }} <span class="count">({{ len .Pages }})</span>
+        </a>
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+</nav>
+
+<script>
+function switchVersion(v) {
+  var parts = window.location.pathname.split('/').filter(Boolean);
+  if (parts.length > 0) { parts[0] = v; }
+  var target = '/' + parts.join('/');
+  // Try the exact page first; fall back to version root if it 404s
+  fetch(target, { method: 'HEAD' }).then(function(r) {
+    window.location.pathname = r.ok ? target : '/' + v + '/';
+  }).catch(function() {
+    window.location.pathname = '/' + v + '/';
+  });
+}
+</script>

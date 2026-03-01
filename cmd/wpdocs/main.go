@@ -1,112 +1,31 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
-	"time"
 
-	"github.com/spf13/cobra"
-
-	"github.com/peter/wpdocs/internal/model"
-	"github.com/peter/wpdocs/internal/output"
-	"github.com/peter/wpdocs/internal/parser"
-	"github.com/peter/wpdocs/internal/resolver"
-	"github.com/peter/wpdocs/internal/source"
+	"github.com/alecthomas/kong"
 )
 
+// CLI defines the top-level wpdocs command with shared flags and subcommands.
+type CLI struct {
+	Output string `help:"Hugo output directory." short:"o" default:"./docs"`
+
+	Generate    GenerateCmd    `cmd:"" help:"Parse WordPress source and generate Hugo content for one version."`
+	GenerateAll GenerateAllCmd `cmd:"" name:"generate-all" help:"Generate docs for all configured WordPress versions."`
+	Build       BuildCmd       `cmd:"" help:"Run Hugo to produce the final static site."`
+	Serve       ServeCmd       `cmd:"" help:"Start Hugo dev server for preview."`
+	Clean       CleanCmd       `cmd:"" help:"Remove generated content and built site."`
+}
+
 func main() {
-	var (
-		wpPath       string
-		outDir       string
-		wpTag        string
-		guidesDir    string
-		overridesDir string
-		skipJS       bool
-		skipPHP      bool
-		workers      int
+	var cli CLI
+	ctx := kong.Parse(&cli,
+		kong.Name("wpdocs"),
+		kong.Description("Generate WordPress developer documentation from source."),
+		kong.UsageOnError(),
 	)
-
-	root := &cobra.Command{
-		Use:   "wpdocs",
-		Short: "Generate WordPress developer documentation from source",
-		Long: `Parses WordPress PHP and JS/TS source code, extracts functions,
-classes, hooks, and their documentation, then generates a Hugo static site
-suitable for developer.wordpress.org.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			start := time.Now()
-
-			// Step 1: Resolve WordPress source
-			src, err := source.Resolve(wpPath, wpTag)
-			if err != nil {
-				return fmt.Errorf("resolving source: %w", err)
-			}
-			log.Printf("Using WordPress source: %s (tag: %s)", src.Path, src.Version)
-
-			registry := model.NewRegistry()
-			p := parser.New(workers)
-			p.SetSrcRoot(src.Path)
-
-			// Step 2: Parse PHP
-			if !skipPHP {
-				log.Println("Parsing PHP files...")
-				phpFiles, err := src.FindFiles("*.php")
-				if err != nil {
-					return fmt.Errorf("finding PHP files: %w", err)
-				}
-				log.Printf("Found %d PHP files", len(phpFiles))
-
-				if err := p.ParseFiles(phpFiles, registry); err != nil {
-					return fmt.Errorf("parsing PHP: %w", err)
-				}
-				log.Printf("Extracted %d PHP symbols", registry.CountByLanguage("php"))
-			}
-
-			// Step 3: Parse JS/TS
-			if !skipJS {
-				log.Println("Parsing JS/TS files...")
-				jsFiles, err := src.FindFiles("*.js", "*.ts", "*.jsx", "*.tsx")
-				if err != nil {
-					return fmt.Errorf("finding JS files: %w", err)
-				}
-				log.Printf("Found %d JS/TS files", len(jsFiles))
-
-				if err := p.ParseFiles(jsFiles, registry); err != nil {
-					return fmt.Errorf("parsing JS/TS: %w", err)
-				}
-				log.Printf("Extracted %d JS/TS symbols", registry.CountByLanguage("js"))
-			}
-
-			// Step 4: Resolve cross-references
-			log.Println("Resolving cross-references...")
-			res := resolver.New(registry)
-			res.ResolveAll()
-			log.Printf("Resolved %d cross-references", res.Stats().Resolved)
-
-			// Step 5: Generate Hugo site
-			log.Printf("Generating Hugo site in %s", outDir)
-			gen := output.NewHugo(outDir, src.Path, src.Version, guidesDir, overridesDir)
-			if err := gen.Generate(registry); err != nil {
-				return fmt.Errorf("generating output: %w", err)
-			}
-
-			log.Printf("Done in %s. Total symbols: %d",
-				time.Since(start).Round(time.Millisecond),
-				registry.Count())
-			return nil
-		},
-	}
-
-	root.Flags().StringVarP(&wpPath, "source", "s", "", "Path to WordPress source (or auto-downloads if empty)")
-	root.Flags().StringVarP(&outDir, "output", "o", "./docs", "Output directory for Hugo site")
-	root.Flags().StringVarP(&wpTag, "tag", "t", "latest", "WordPress version tag (e.g., 6.7.1)")
-	root.Flags().StringVarP(&guidesDir, "guides", "g", "./content/guides", "Path to guide markdown files (_shared/ + version dirs)")
-	root.Flags().StringVar(&overridesDir, "overrides", "./content/overrides", "Path to override markdown files (_shared/ + version dirs)")
-	root.Flags().BoolVar(&skipJS, "skip-js", false, "Skip JS/TS parsing")
-	root.Flags().BoolVar(&skipPHP, "skip-php", false, "Skip PHP parsing")
-	root.Flags().IntVarP(&workers, "workers", "w", 8, "Number of parallel workers")
-
-	if err := root.Execute(); err != nil {
+	err := ctx.Run(&cli)
+	if err != nil {
 		os.Exit(1)
 	}
 }

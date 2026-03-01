@@ -1,0 +1,7 @@
+<div class="meta-bar">
+  <span class="badge kind">{{ .Params.symbol_kind }}</span>
+  <span class="badge lang">{{ .Params.language }}</span>
+  {{ with .Params.access }}<span class="badge access">{{ . }}</span>{{ end }}
+  {{ with .Params.since }}<span class="badge since">Since {{ . }}</span>{{ end }}
+  {{ with .Params.deprecated }}<span class="badge deprecated">Deprecated</span>{{ end }}
+</div>

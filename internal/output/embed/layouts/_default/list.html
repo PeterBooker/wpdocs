@@ -1,0 +1,72 @@
+{{ define "main" }}
+{{ $isVersionRoot := and .Params.version (eq (len .Sections) (len .Sections)) }}
+{{ $parts := split (strings.TrimPrefix "/" .RelPermalink) "/" }}
+{{ $depth := len (where $parts "." "!=" "") }}
+
+{{ if le $depth 1 }}
+{{/* Version landing page */}}
+<h1>{{ .Title }}</h1>
+
+{{ $guidesSection := .GetPage "guides" }}
+{{ with $guidesSection }}
+  {{ if .Pages }}
+  <section class="guides-overview">
+    <h2>Guides</h2>
+    <div class="guide-cards">
+      {{ range .Pages.ByWeight }}
+      <a href="{{ .RelPermalink }}" class="guide-card">
+        <h3>{{ .Title }}</h3>
+        {{ with .Params.summary }}<p>{{ . }}</p>{{ end }}
+      </a>
+      {{ end }}
+    </div>
+  </section>
+  {{ end }}
+{{ end }}
+
+<section class="reference-overview">
+  <h2>Reference</h2>
+  <div class="stats-grid">
+    {{ $refSections := slice "functions" "classes" "methods" "hooks" "interfaces" "traits" "enums" "components" }}
+    {{ range $refSections }}
+      {{ $sec := $.GetPage . }}
+      {{ with $sec }}
+        {{ if .Pages }}
+        <div class="stat-card">
+          <div class="stat-number">{{ len .Pages }}</div>
+          <div class="stat-label"><a href="{{ .RelPermalink }}">{{ .Title }}</a></div>
+        </div>
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  </div>
+</section>
+
+{{ else }}
+{{/* Section listing page (functions, classes, etc.) */}}
+<h1>{{ .Title }}</h1>
+<p class="count">{{ len .Pages }} items</p>
+
+<table class="listing">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Summary</th>
+      <th>Since</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range .Pages.ByTitle }}
+    <tr{{ if .Params.deprecated }} class="deprecated-row"{{ end }}>
+      <td>
+        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        {{ with .Params.deprecated }}<span class="badge deprecated">Deprecated</span>{{ end }}
+      </td>
+      <td>{{ .Params.summary }}</td>
+      <td class="since">{{ .Params.since }}</td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }}
+{{ end }}

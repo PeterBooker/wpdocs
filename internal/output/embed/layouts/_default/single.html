@@ -1,0 +1,149 @@
+{{ define "main" }}
+<article class="wp-reference">
+
+<h1>{{ .Title }}</h1>
+
+{{ partial "meta.html" . }}
+
+{{ with .Params.deprecated }}
+<div class="deprecated-notice">
+  <strong>This {{ $.Params.symbol_kind }} has been deprecated.</strong> {{ . }}
+</div>
+{{ end }}
+
+{{ with .Params.signature }}
+<section class="signature-section">
+  <pre class="signature-block"><code>{{ . }}</code></pre>
+</section>
+{{ end }}
+
+<section class="description-section">
+  <h2>Description</h2>
+  {{ with .Params.summary }}<p class="summary">{{ . }}</p>{{ end }}
+  {{ with .Content }}<div class="long-description">{{ . }}</div>{{ end }}
+  {{ with .Params.see_also }}
+  <h3>See also</h3>
+  <ul>{{ range . }}<li><code>{{ . }}</code></li>{{ end }}</ul>
+  {{ end }}
+  {{ with .Params.links }}
+  <ul class="doc-links">{{ range . }}<li><a href="{{ . }}">{{ . }}</a></li>{{ end }}</ul>
+  {{ end }}
+</section>
+
+{{ with .Params.parameters }}
+<section class="parameters-section">
+  <h2>Parameters</h2>
+  <dl class="param-list">
+    {{ range . }}
+    <dt>
+      <code>${{ .name }}</code>
+      <span class="param-type"><code>{{ .type }}</code></span>
+      {{ if .variadic }}<span class="param-tag">variadic</span>{{ end }}
+      {{ if .pass_by_ref }}<span class="param-tag">by&nbsp;ref</span>{{ end }}
+    </dt>
+    <dd>
+      {{ .description }}
+      {{ with .default }}<p class="param-default">Default: <code>{{ . }}</code></p>{{ end }}
+    </dd>
+    {{ end }}
+  </dl>
+</section>
+{{ end }}
+
+{{ with .Params.returns }}{{ if .type }}
+<section class="return-section">
+  <h2>Return</h2>
+  <p><code class="return-type">{{ .type }}</code> {{ .description }}</p>
+</section>
+{{ end }}{{ end }}
+
+{{ if .Params.hook_tag }}
+<section class="hook-section">
+  <h2>Hook Details</h2>
+  <p>Type: <strong>{{ .Params.hook_type }}</strong></p>
+  <p>Tag: <code>{{ .Params.hook_tag }}</code></p>
+  {{ with .Params.call_sites }}
+  <h3>Fired from</h3>
+  <ul>{{ range . }}<li><code>{{ . }}</code></li>{{ end }}</ul>
+  {{ end }}
+</section>
+{{ end }}
+
+{{ with .Params.members }}
+<section>
+  <h2>Members</h2>
+  <ul class="member-list">{{ range . }}<li><code>{{ . }}</code></li>{{ end }}</ul>
+</section>
+{{ end }}
+
+{{ with .Params.extends }}
+<section>
+  <h2>Extends</h2>
+  <ul>{{ range . }}<li><code>{{ . }}</code></li>{{ end }}</ul>
+</section>
+{{ end }}
+
+{{ with .Params.implements }}
+<section>
+  <h2>Implements</h2>
+  <ul>{{ range . }}<li><code>{{ . }}</code></li>{{ end }}</ul>
+</section>
+{{ end }}
+
+{{ if .Params.file }}
+<section class="source-section">
+  <h2>Source</h2>
+  <p class="source-file">File: <code>{{ .Params.file }}</code>, lines {{ .Params.start_line }}&ndash;{{ .Params.end_line }}</p>
+  <div class="source-links">
+    {{ with .Params.github_url }}<a href="{{ . }}">View on GitHub</a>{{ end }}
+    {{ with .Params.trac_url }}<a href="{{ . }}">View on Trac</a>{{ end }}
+  </div>
+  {{ with .Params.source_code }}
+  <details class="source-code-details">
+    <summary>Show source</summary>
+    <pre class="source-code"><code>{{ . }}</code></pre>
+  </details>
+  {{ end }}
+</section>
+{{ end }}
+
+{{ if or .Params.uses .Params.used_by }}
+<section class="related-section">
+  <h2>Related</h2>
+  {{ with .Params.uses }}
+  <h3>Uses</h3>
+  <table class="related-table">
+    <thead><tr><th>Function</th></tr></thead>
+    <tbody>
+      {{ range . }}<tr><td><code>{{ . }}</code></td></tr>{{ end }}
+    </tbody>
+  </table>
+  {{ end }}
+  {{ with .Params.used_by }}
+  <h3>Used By</h3>
+  <table class="related-table">
+    <thead><tr><th>Function</th></tr></thead>
+    <tbody>
+      {{ range . }}<tr><td><code>{{ . }}</code></td></tr>{{ end }}
+    </tbody>
+  </table>
+  {{ end }}
+</section>
+{{ end }}
+
+{{ with .Params.changelog }}
+<section class="changelog-section">
+  <h2>Changelog</h2>
+  <table class="changelog-table">
+    <thead><tr><th>Version</th><th>Description</th></tr></thead>
+    <tbody>
+      {{ range . }}
+      <tr><td>{{ .version }}</td><td>{{ .description }}</td></tr>
+      {{ end }}
+    </tbody>
+  </table>
+</section>
+{{ end }}
+
+</article>
+{{ end }}

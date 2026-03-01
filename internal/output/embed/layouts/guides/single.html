@@ -1,0 +1,27 @@
+{{ define "main" }}
+<article class="guide-article">
+
+<h1>{{ .Title }}</h1>
+
+{{ if .TableOfContents }}
+<aside class="guide-toc">
+  <h4>On this page</h4>
+  {{ .TableOfContents }}
+</aside>
+{{ end }}
+
+<div class="guide-body">
+  {{ .Content }}
+</div>
+
+<nav class="guide-pager">
+  {{ with .PrevInSection }}
+  <a href="{{ .RelPermalink }}" class="pager-prev">&larr; {{ .Title }}</a>
+  {{ end }}
+  {{ with .NextInSection }}
+  <a href="{{ .RelPermalink }}" class="pager-next">{{ .Title }} &rarr;</a>
+  {{ end }}
+</nav>
+
+</article>
+{{ end }}
