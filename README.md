@@ -76,58 +76,161 @@ cd wpdocs
 go build -o wpdocs ./cmd/wpdocs
 ```
 
-## Usage
+## Commands
 
-```bash
-# Generate docs from a local WordPress source tree
-wpdocs --source /path/to/wordpress
+wpdocs is organized as a multi-command CLI. The general syntax is:
 
-# Auto-download the latest WordPress and generate docs
-wpdocs
-
-# Target a specific WordPress version
-wpdocs --tag 6.7.1
-
-# Specify output directory
-wpdocs --source /path/to/wordpress --output ./my-docs
-
-# Skip JS/TS or PHP parsing
-wpdocs --source /path/to/wordpress --skip-js
-wpdocs --source /path/to/wordpress --skip-php
-
-# Control parallelism
-wpdocs --source /path/to/wordpress --workers 16
+```
+wpdocs [global flags] <command> [command flags]
 ```
 
-### Flags
+### Global Flags
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--source` | `-s` | *(auto-download)* | Path to a local WordPress source tree |
-| `--output` | `-o` | `./docs` | Output directory for the generated Hugo site |
+| `--output` | `-o` | `./docs` | Hugo output directory |
+
+### `generate`
+
+Parse WordPress source and generate Hugo content for a single version.
+
+```bash
+# Generate docs from a local WordPress source tree
+wpdocs generate --source /path/to/wordpress
+
+# Auto-download the latest WordPress and generate docs
+wpdocs generate
+
+# Target a specific WordPress version
+wpdocs generate --tag 6.7.1
+
+# Specify output directory
+wpdocs -o ./my-docs generate --source /path/to/wordpress
+
+# Skip JS/TS or PHP parsing
+wpdocs generate --source /path/to/wordpress --skip-js
+wpdocs generate --source /path/to/wordpress --skip-php
+
+# Control parallelism
+wpdocs generate --source /path/to/wordpress --workers 16
+```
+
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--source` | `-s` | *(auto-clone)* | Path to a local WordPress source tree |
 | `--tag` | `-t` | `latest` | WordPress version tag (e.g. `6.7.1`) |
+| `--guides` | `-g` | `./content/guides` | Path to guide markdown files |
+| `--overrides` | | `./content/overrides` | Path to override markdown files |
 | `--skip-js` | | `false` | Skip JavaScript/TypeScript parsing |
 | `--skip-php` | | `false` | Skip PHP parsing |
 | `--workers` | `-w` | `8` | Number of parallel parser workers |
 
-## Building and Serving the Site
+### `generate-all`
 
-After running `wpdocs`, a Hugo site is generated in the output directory (`./docs` by default). If Hugo is installed, the site is built automatically. You can also build and serve it manually:
+Generate docs for multiple WordPress versions in one run. Versions are read from `wpdocs.toml` or passed via `--versions`.
 
 ```bash
-# Build the static site
-hugo --source ./docs
+# Generate docs for versions defined in wpdocs.toml
+wpdocs generate-all
 
-# Serve locally with live reload
-hugo server --source ./docs
+# Override versions from the command line
+wpdocs generate-all --versions 6.8.1 --versions 6.7.2 --versions 6.6.2
+
+# Minify the final build
+wpdocs generate-all --minify
+
+# Custom cache directory and parallelism
+wpdocs generate-all --cache-dir /tmp/wp-cache --workers 16
 ```
 
-The built site will be in `./docs/public/`.
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--versions` | `-v` | *(from wpdocs.toml)* | WordPress version tags |
+| `--cache-dir` | | `./.wp-cache` | Directory to cache WordPress source trees |
+| `--guides` | `-g` | `./content/guides` | Path to guide markdown files |
+| `--overrides` | | `./content/overrides` | Path to override markdown files |
+| `--workers` | `-w` | `8` | Number of parallel parser workers |
+| `--minify` | | `false` | Minify the final Hugo build output |
+
+### `build`
+
+Run Hugo to produce the final static site from previously generated content.
+
+```bash
+wpdocs build
+wpdocs build --minify
+wpdocs -o ./my-docs build --minify
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--minify` | `false` | Minify the output |
+
+### `serve`
+
+Start a Hugo development server for local preview.
+
+```bash
+wpdocs serve
+wpdocs serve --port 8080
+wpdocs -o ./my-docs serve
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--port` | `1313` | Server port |
+
+### `clean`
+
+Remove all generated content and the built site.
+
+```bash
+wpdocs clean
+wpdocs -o ./my-docs clean
+```
+
+This removes versioned content directories, the root `_index.md`, the `public/` build output, and `data/versions.json`.
+
+## Configuration
+
+For multi-version builds, create a `wpdocs.toml` in your working directory:
+
+```toml
+versions = ["6.8.1", "6.7.2", "6.6.2"]
+```
+
+This is used by `generate-all` when no `--versions` flags are provided.
+
+## Guides and Overrides
+
+wpdocs supports two types of supplementary content that are merged into the generated site:
+
+- **Guides** (`./content/guides/`) — Standalone documentation pages (tutorials, conceptual docs) added alongside the auto-generated reference. Organized into `_shared/` (applies to all versions) and version-specific directories (e.g. `6.8/`).
+- **Overrides** (`./content/overrides/`) — Extra content appended to individual symbol pages to supplement the auto-generated documentation. Same directory structure as guides.
+
+## Typical Workflow
+
+```bash
+# Single version
+wpdocs generate --tag 6.8.1
+wpdocs build --minify
+wpdocs serve
+
+# Multiple versions
+wpdocs generate-all --minify
+wpdocs serve
+
+# Clean up generated files
+wpdocs clean
+```
 
 ## Project Structure
 
-```bash
-cmd/wpdocs/          CLI entry point
+```
+cmd/wpdocs/          CLI entry point and commands
+content/
+  guides/            Guide markdown files (_shared/ and per-version)
+  overrides/         Override markdown files (_shared/ and per-version)
 internal/
   model/             Symbol data model and thread-safe registry
   source/            WordPress source resolution and file discovery

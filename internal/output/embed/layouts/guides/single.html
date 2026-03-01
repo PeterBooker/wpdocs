@@ -3,15 +3,17 @@
 
 <h1>{{ .Title }}</h1>
 
-{{ if .TableOfContents }}
-<aside class="guide-toc">
-  <h4>On this page</h4>
-  {{ .TableOfContents }}
-</aside>
-{{ end }}
+<div class="guide-layout">
+  <div class="guide-body">
+    {{ .Content }}
+  </div>
 
-<div class="guide-body">
-  {{ .Content }}
+  {{ if .TableOfContents }}
+  <aside class="guide-toc">
+    <h4>On this page</h4>
+    {{ .TableOfContents }}
+  </aside>
+  {{ end }}
 </div>
 
 <nav class="guide-pager">

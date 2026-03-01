@@ -585,10 +585,15 @@ li { margin: 0.25rem 0; }
   margin-bottom: 1.5rem;
 }
 
+/* Guide layout: flex wrapper for body + TOC */
+.guide-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .guide-toc {
-  float: right;
-  width: 220px;
-  margin: 0 0 1rem 2rem;
+  order: -1;
   padding: 1rem;
   background: var(--wp-light);
   border-radius: 6px;
@@ -704,11 +709,34 @@ li { margin: 0.25rem 0; }
   color: var(--wp-blue);
 }
 
+/* Large screens: TOC as sticky right sidebar */
+@media (min-width: 1200px) {
+  .guide-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .guide-layout .guide-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .guide-toc {
+    order: 0;
+    width: 220px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  .content:has(.guide-article) {
+    max-width: calc(var(--content-max) + var(--sidebar-width) + 220px + 8rem);
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .content { margin-left: 0; padding: 1rem; max-width: 100%; }
   .member-list { column-count: 1; }
-  .guide-toc { float: none; width: 100%; margin: 0 0 1.5rem 0; }
   .guide-cards { grid-template-columns: 1fr; }
 }
